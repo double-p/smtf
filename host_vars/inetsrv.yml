@@ -1,0 +1,7 @@
+---
+network:
+  vlan:
+    vlan10:
+      description: "my-vlan-10"
+      ipmain: "172.19.10.10/24"
+      vlandev: "{{ vm_iff }}1"

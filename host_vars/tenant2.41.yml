@@ -1,0 +1,18 @@
+---
+network:
+  vlan:
+    vlan41:
+      description: "my-vlan-41"
+      ipmain: "10.40.41.41/24"
+      vlandev: "{{ vm_iff }}1"
+      rdomain: "41"
+    vlan42:
+      description: "my-vlan-42"
+      ipmain: "10.40.42.41/24"
+      vlandev: "{{ vm_iff }}1"
+      rdomain: "42"
+    vlan43:
+      description: "my-vlan-43"
+      ipmain: "10.40.43.41/24"
+      vlandev: "{{ vm_iff }}1"
+      rdomain: "43"

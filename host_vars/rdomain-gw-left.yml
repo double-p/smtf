@@ -1,0 +1,58 @@
+---
+network:
+  vlan:
+    vlan21:
+      description: "my-vlan-21"
+      ipmain: "10.20.21.22/24"
+      vlandev: "{{ vm_iff }}1"
+      rdomain: "21"
+    vlan22:
+      description: "my-vlan-22"
+      ipmain: "10.20.22.22/24"
+      vlandev: "{{ vm_iff }}1"
+      rdomain: "22"
+    vlan23:
+      description: "my-vlan-23"
+      ipmain: "10.20.23.22/24"
+      vlandev: "{{ vm_iff }}1"
+      rdomain: "23"
+    vlan41:
+      description: "my-vlan-41"
+      ipmain: "10.40.41.42/24"
+      vlandev: "{{ vm_iff }}1"
+      rdomain: "41"
+    vlan42:
+      description: "my-vlan-42"
+      ipmain: "10.40.42.42/24"
+      vlandev: "{{ vm_iff }}1"
+      rdomain: "42"
+    vlan43:
+      description: "my-vlan-43"
+      ipmain: "10.40.43.42/24"
+      vlandev: "{{ vm_iff }}1"
+      rdomain: "43"
+  carp:
+    carp21:
+      description: "my-carp-21"
+      ipmain: "10.20.21.1/24"
+      rdomain: "21"
+    carp22:
+      description: "my-carp-22"
+      ipmain: "10.20.22.1/24"
+      rdomain: "22"
+    carp23:
+      description: "my-carp-23"
+      ipmain: "10.20.23.1/24"
+      rdomain: "23"
+    carp41:
+      description: "my-carp-41"
+      ipmain: "10.40.41.1/24"
+      rdomain: "41"
+    carp42:
+      description: "my-carp-42"
+      ipmain: "10.40.42.1/24"
+      rdomain: "42"
+    carp43:
+      description: "my-carp-43"
+      ipmain: "10.40.43.1/24"
+      rdomain: "43"

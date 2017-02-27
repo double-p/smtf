@@ -1,0 +1,14 @@
+---
+network:
+  vlan:
+    vlan10:
+      description: "my-vlan-10"
+      ipmain: "172.19.10.11/24"
+      vlandev: "{{ vm_iff }}1"
+      rdomain: "10"
+  carp:
+    carp10:
+      description: "my-carp-10"
+      ipmain: "172.19.10.1/24"
+      carpdev: "vlan10"
+      rdomain: "10"
