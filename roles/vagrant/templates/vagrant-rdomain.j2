@@ -1,6 +1,8 @@
 $inlprv=<<SCRIPT
 route delete default
 [ -z "$1" ] || route add default $1
+SCRIPT
+
 Vagrant.configure("2") do |config|
   config.vm.guest = :openbsd
   config.ssh.shell = "ksh -l"

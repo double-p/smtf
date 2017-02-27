@@ -12,3 +12,4 @@ network:
       ipmain: "172.19.10.1/24"
       carpdev: "vlan10"
       rdomain: "10"
+      master: "rdomain-gw-right"

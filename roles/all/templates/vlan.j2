@@ -23,7 +23,7 @@ inet alias {{ alias }}
 {% endif %} {# ipalias #}
 {% endif %} {# up/dhcp #}
 
-{% if item.value.commands }}
+{% if item.value.commands is defined %}
 {% for command in item.value.commands %}
 !{{ command }}
 {% endfor %}

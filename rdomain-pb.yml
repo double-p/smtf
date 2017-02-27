@@ -1,0 +1,6 @@
+- hosts: notlocal
+  gather_facts: no
+  vars_files:
+    - "group_vars/rdomain.yml"
+  roles:
+  - role: all

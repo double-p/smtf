@@ -36,23 +36,29 @@ network:
       description: "my-carp-21"
       ipmain: "10.20.21.1/24"
       rdomain: "21"
+      master: "rdomain-gw-left"
     carp22:
       description: "my-carp-22"
       ipmain: "10.20.22.1/24"
       rdomain: "22"
+      master: "rdomain-gw-left"
     carp23:
       description: "my-carp-23"
       ipmain: "10.20.23.1/24"
       rdomain: "23"
+      master: "rdomain-gw-left"
     carp41:
       description: "my-carp-41"
       ipmain: "10.40.41.1/24"
       rdomain: "41"
+      master: "rdomain-gw-left"
     carp42:
       description: "my-carp-42"
       ipmain: "10.40.42.1/24"
       rdomain: "42"
+      master: "rdomain-gw-left"
     carp43:
       description: "my-carp-43"
       ipmain: "10.40.43.1/24"
       rdomain: "43"
+      master: "rdomain-gw-left"
