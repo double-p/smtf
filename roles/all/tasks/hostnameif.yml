@@ -1,0 +1,24 @@
+---
+- name: create hostname.if for physical interfaces
+  # ipmain can be: up, dhcp, dotted-quad-address
+  # optional variables: ipaliases, rdomain, commands
+  template: src=phy.j2 dest=/etc/hostname.{{ item.key }} owner=root mode=0600
+  with_dict: "{{ network.phy }}"
+  when: network.phy is defined
+
+- name: create hostname.if for vlan interfaces
+  # ipmain can be: up, dhcp, dotted-quad-address
+  # optional variables: vlandev, ipaliases, rdomain, commands
+  template: src=vlan.j2 dest=/etc/hostname.{{ item.key }} owner=root mode=0600
+  with_dict: "{{ network.vlan }}"
+  when: network.vlan is defined
+
+- name: create hostname.if for carp interfaces
+  # optional variables: carpdev, vhid, ipaliases, rdomain, commands
+  # vhid dervived from ifname, if carp99X is at stake, use 9X as vhid
+  template: src=carp.j2 dest=/etc/hostname.{{ item.key }} owner=root mode=0600
+  with_dict: "{{ network.carp }}"
+  when: network.carp is defined
+
+#- name: activate new networking
+  #shell: "sh /etc/netstart"

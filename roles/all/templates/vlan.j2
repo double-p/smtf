@@ -1,0 +1,30 @@
+description "{{ item.value.description }}"
+vlan {{ item.key[4:7] }}
+{% if item.value.vlandev is defined %}
+vlandev {{ item.value.vlandev }}
+{% else %}
+vlandev {{ firewall.intern_phy }}
+{% endif %}
+
+{% if item.value.rdomain is defined %}
+rdomain {{ item.value.rdomain }}
+{% endif %}
+
+{% if item.value.ipmain == "up" %}
+up
+{% elif item.value.ipmain == "dhcp" %}
+dhcp
+{% else %}
+inet {{ item.value.ipmain }}
+{% if item.value.ipaliases is defined %}
+{% for alias in item.value.ipaliases %}
+inet alias {{ alias }}
+{% endfor %}
+{% endif %} {# ipalias #}
+{% endif %} {# up/dhcp #}
+
+{% if item.value.commands }}
+{% for command in item.value.commands %}
+!{{ command }}
+{% endfor %}
+{% endif %}

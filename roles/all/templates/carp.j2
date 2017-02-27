@@ -1,0 +1,41 @@
+description {{ item.value.description }}
+pass {{ carp_key }}
+
+{% if item.value.master == inventory_hostname %}
+advskew 10
+{% else %}
+advskew 110
+{% endif %}
+
+{% if item.value.vhid is defined %}
+vhid {{ item.value.vhid }}
+{% else %}
+{% if item.key[4:6] == "99" %}
+vhid {{ item.key[5:8] }}
+{% else %}
+vhid {{ item.key[4:7] }}
+{% endif %}
+{% endif %}
+
+{% if item.value.carpdev is defined %}
+carpdev {{ item.value.carpdev }}
+{% else %}
+carpdev vlan{{ item.key[4:7] }}
+{% endif %}
+
+{% if item.value.rdomain is defined %}
+rdomain {{ item.value.rdomain }}
+{% endif %}
+
+inet {{ item.value.ipmain }}
+{% if item.value.ipaliases is defined %}
+{% for alias in item.value.ipaliases %}
+inet alias {{ alias }}
+{% endfor %}
+{% endif %}
+
+{% if item.value.commands is defined %}
+{% for command in item.value.commands %}
+!{{ command }}
+{% endfor %}
+{% endif %}

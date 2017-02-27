@@ -1,0 +1,24 @@
+---
+- name: sysctl.conf
+  lineinfile:
+    dest: /etc/sysctl.conf
+    regexp: '^{{ item.key }}.*$'
+    line: "{{ item.key }}={{ item.value }}"
+    owner: root
+    mode: 0600
+    state: present
+    create: yes
+  with_items:
+    - { key: 'net.inet.ip.forwarding', value: '1' }
+    - { key: 'ddb.panic', value: '0' }
+    - { key: 'net.inet.carp.preempt', value: '1' }
+
+- name: create .profile
+  template: src=rootprofile.j2 dest=/root/.profile owner=root mode=0600
+- name: create /etc/ksh.kshrc
+  template: src=kshrc.j2 dest=/etc/ksh.kshrc owner=root mode=0644
+- name: activate sysctl.conf entries
+  shell: 'for sc in `grep -E "^[a-z]" /etc/sysctl.conf`; do sysctl -w $sc; done'
+
+- name: create hostname.ifs
+  include: hostnameif.yml
