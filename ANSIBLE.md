@@ -7,5 +7,5 @@ Vagrantfile
 -----
 The following command generates a Vagrantfile based on group_vars/rdomain.yml information
 ````
-ansible-playbook -i vagrant_inventory -e "@group_vars/rdomain.yml" -e 'rdomain=true' vagrant-pb.yml
+ansible-playbook -i local_inventory -e "@group_vars/rdomain.yml" -e 'rdomain=true' vagrant-pb.yml
 ````
