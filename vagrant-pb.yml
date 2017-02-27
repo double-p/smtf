@@ -1,0 +1,10 @@
+---
+#  create Vagrantfiles
+# "activate" your choice by e.g. "-e 'rdomain=true'"
+
+- hosts: localhost
+  gather_facts: no
+  vars_files:
+    - "group_vars/all.yml"
+  roles:
+  - role: vagrant

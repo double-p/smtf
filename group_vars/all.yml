@@ -1,0 +1,9 @@
+---
+# encourage to put "keys" in an ansible-vault
+carp_key: b0b80e3b1cf1910aea617676fda6d0d5b24bd673
+
+# Vagrant base image, created with packer
+openbsd_vbox: obsd60
+
+# em(4) might be replaced with virtio(4) the other day
+vm_iff: em

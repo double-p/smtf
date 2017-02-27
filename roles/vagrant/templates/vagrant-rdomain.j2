@@ -1,0 +1,56 @@
+$inlprv=<<SCRIPT
+route delete default
+[ -z "$1" ] || route add default $1
+Vagrant.configure("2") do |config|
+  config.vm.guest = :openbsd
+  config.ssh.shell = "ksh -l"
+  config.ssh.username = "root"
+  config.ssh.password = "vagrant"
+  config.vm.box = "{{ openbsd_vbox }}"
+  config.vm.synced_folder ".", "/vagrant", disabled: true
+
+  config.vm.define "tenant1.21" do |v|
+    v.vm.network :private_network, ip: "{{ rdomain_tenant1 }}.21"
+    v.vm.hostname = "tenant1"
+    v.vm.provider :virtualbox do |vb|
+      vb.customize ["modifyvm", :id, "--memory", 128]
+    end
+    v.vm.provision "shell", inline: $inlprv, args: "{{ rdomain_tenant1 }}.254"
+  end
+  config.vm.define "tenant2.41" do |v|
+    v.vm.network :private_network, ip: "{{ rdomain_tenant2 }}.52"
+    v.vm.hostname = "tenant2"
+    v.vm.provider :virtualbox do |vb|
+      vb.customize ["modifyvm", :id, "--memory", 128]
+    end
+    v.vm.provision "shell", inline: $inlprv, args: "{{ rdomain_tenant2 }}.254"
+  end
+  config.vm.define "rdomain-gw-left", primary: true do |v|
+    v.vm.network :private_network, ip: "{{ rdomain_tenant1 }}.254"
+    v.vm.network :private_network, ip: "{{ rdomain_tenant2 }}.254"
+    v.vm.network :private_network, ip: "{{ rdomain_gwgw }}.254"
+    v.vm.hostname = "rdomain-gw-left"
+    v.vm.provider :virtualbox do |vb|
+      vb.customize ["modifyvm", :id, "--memory", 256]
+      vb.gui = true;
+    end
+    v.vm.provision "shell", inline: $inlprv
+  end
+  config.vm.define "rdomain-gw-right" do |v|
+    v.vm.network :private_network, ip: "{{ rdomain_gwgw }}.253"
+    v.vm.network :private_network, ip: "{{ rdomain_inet }}.254"
+    v.vm.hostname = "rdomain-gw-right"
+    v.vm.provider :virtualbox do |vb|
+      vb.customize ["modifyvm", :id, "--memory", 128]
+    end
+    v.vm.provision "shell", inline: $inlprv
+  end
+  config.vm.define "inetsrv" do |v|
+    v.vm.network :private_network, ip: "{{ rdomain_inet }}.10"
+    v.vm.hostname = "inetsrv"
+    v.vm.provider :virtualbox do |vb|
+      vb.customize ["modifyvm", :id, "--memory", 128]
+    end
+    v.vm.provision "shell", inline: $inlprv, args: "{{ rdomain_inet }}.254"
+  end
+end

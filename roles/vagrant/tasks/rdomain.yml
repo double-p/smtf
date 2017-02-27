@@ -1,0 +1,2 @@
+- name: generate local Vagrantfile
+  template: src=vagrant-rdomain.j2 dest=./Vagrantfile backup=yes

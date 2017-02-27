@@ -1,0 +1,5 @@
+---
+rdomain_tenant1: 10.20.20
+rdomain_tenant2: 10.40.40
+rdomain_gwgw: 10.0.123
+rdomain_inet: 172.19.82

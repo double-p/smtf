@@ -1,0 +1,4 @@
+---
+- name: generate rdomain testbed
+  include: rdomain.yml
+  when: rdomain is defined
