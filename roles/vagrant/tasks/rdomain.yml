@@ -1,2 +1,4 @@
 - name: generate local Vagrantfile
-  template: src=vagrant-rdomain.j2 dest=./Vagrantfile backup=yes
+  template: src=vagrant-rdomain.j2 dest=./Vagrantfile
+- name: generate local vagrant_inventory
+  template: src=inventory_rdomain.j2 dest=./vagrant_inventory

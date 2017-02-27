@@ -1,5 +1,6 @@
 Vagrantfile*
 .vagrant
+vagrant_inventory
 sshconf
 Packer/ISO/*
 Packer/*.box

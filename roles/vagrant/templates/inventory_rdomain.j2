@@ -1,0 +1,25 @@
+[tenants]
+tenant1.21 ansible_ssh_host={{ rdomain_tenant1 }}.21 ansible_ssh_private_key_file=.vagrant/machines/tenant1.21/virtualbox/private_key
+tenant2.41 ansible_ssh_host={{ rdomain_tenant2 }}.52 ansible_ssh_private_key_file=.vagrant/machines/tenant2.41/virtualbox/private_key
+
+[rdomains]
+rdomain-gw-left ansible_ssh_host={{ rdomain_gwgw }}.254 ansible_ssh_private_key_file=.vagrant/machines/rdomain-gw-left/virtualbox/private_key
+rdomain-gw-right ansible_ssh_host={{ rdomain_gwgw }}.253 ansible_ssh_private_key_file=.vagrant/machines/rdomain-gw-right/virtualbox/private_key
+
+[inet]
+inetsrv ansible_ssh_host={{ rdomain_inet }}.10 ansible_ssh_private_key_file=.vagrant/machines/inetsrv/virtualbox/private_key
+
+[all:children]
+tenants
+rdomains
+inet
+
+[local]
+localhost ansible_connection=local
+
+[all:vars]
+ansible_python_interpreter=/usr/local/bin/python2.7
+ansible_ssh_user=root
+
+[localhost:vars]
+ansible_python_interpreter=/usr/bin/python
