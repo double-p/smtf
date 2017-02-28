@@ -1,0 +1,103 @@
+Index: relayctl.8
+===================================================================
+RCS file: /cvs/src/usr.sbin/relayctl/relayctl.8,v
+retrieving revision 1.32
+diff -u -p -r1.32 relayctl.8
+--- relayctl.8	28 Nov 2015 01:22:44 -0000	1.32
++++ relayctl.8	28 Feb 2017 20:09:34 -0000
+@@ -23,6 +23,7 @@
+ .Nd control the relay daemon
+ .Sh SYNOPSIS
+ .Nm
++.Op Fl s Ar socket
+ .Ar command
+ .Op Ar argument ...
+ .Sh DESCRIPTION
+@@ -32,6 +33,17 @@ program controls the
+ .Xr relayd 8
+ daemon.
+ .Pp
++The following options are available:
++.Bl -tag -width Ds
++.It Fl s Ar socket
++Use
++.Ar socket
++instead of the default
++.Pa /var/run/relayd.sock
++to communicate with
++.Xr relayd 8 .
++.El
++.Pp
+ The following commands are available:
+ .Bl -tag -width Ds
+ .It Cm host disable Op Ar name | id
+@@ -105,6 +117,7 @@ again.
+ .Sh FILES
+ .Bl -tag -width "/var/run/relayd.sockXX" -compact
+ .It Pa /var/run/relayd.sock
++Default
+ .Ux Ns -domain
+ socket used for communication with
+ .Xr relayd 8 .
+Index: relayctl.c
+===================================================================
+RCS file: /cvs/src/usr.sbin/relayctl/relayctl.c,v
+retrieving revision 1.57
+diff -u -p -r1.57 relayctl.c
+--- relayctl.c	3 Sep 2016 14:44:21 -0000	1.57
++++ relayctl.c	28 Feb 2017 20:09:34 -0000
+@@ -88,7 +88,8 @@ usage(void)
+ {
+ 	extern char *__progname;
+ 
+-	fprintf(stderr, "usage: %s command [argument ...]\n", __progname);
++	fprintf(stderr, "usage: %s [-s socket] command [argument ...]\n",
++ 	    __progname);
+ 	exit(1);
+ }
+ 
+@@ -101,9 +102,25 @@ main(int argc, char *argv[])
+ 	int			 ctl_sock;
+ 	int			 done = 0;
+ 	int			 n, verbose = 0;
++	int			 ch;
++	char			*sockname;
++
++	sockname = RELAYD_SOCKET;
++	while ((ch = getopt(argc, argv, "s:")) != -1) {
++		switch (ch) {
++		case 's':
++			sockname = optarg;
++			break;
++		default:
++			usage();
++			/* NOTREACHED */
++		}
++	}
++	argc -= optind;
++	argv += optind;
+ 
+ 	/* parse options */
+-	if ((res = parse(argc - 1, argv + 1)) == NULL)
++	if ((res = parse(argc, argv)) == NULL)
+ 		exit(1);
+ 
+ 	/* connect to relayd control socket */
+@@ -112,7 +129,7 @@ main(int argc, char *argv[])
+ 
+ 	bzero(&sun, sizeof(sun));
+ 	sun.sun_family = AF_UNIX;
+-	(void)strlcpy(sun.sun_path, RELAYD_SOCKET, sizeof(sun.sun_path));
++	(void)strlcpy(sun.sun_path, sockname, sizeof(sun.sun_path));
+  reconnect:
+ 	if (connect(ctl_sock, (struct sockaddr *)&sun, sizeof(sun)) == -1) {
+ 		/* Keep retrying if running in monitor mode */
+@@ -121,7 +138,7 @@ main(int argc, char *argv[])
+ 			usleep(100);
+ 			goto reconnect;
+ 		}
+-		err(1, "connect: %s", RELAYD_SOCKET);
++		err(1, "connect: %s", sockname);
+ 	}
+ 
+ 	if (pledge("stdio", NULL) == -1)

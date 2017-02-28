@@ -1,0 +1,277 @@
+Index: parse.y
+===================================================================
+RCS file: /cvs/src/usr.sbin/relayd/parse.y,v
+retrieving revision 1.214
+diff -u -p -r1.214 parse.y
+--- parse.y	5 Jan 2017 13:53:09 -0000	1.214
++++ parse.y	28 Feb 2017 19:44:08 -0000
+@@ -805,6 +805,13 @@ tableopts	: CHECK tablecheck
+ 				break;
+ 			}
+ 		}
++		| RTABLE NUMBER {
++			if ($2 < 0 || $2 > RT_TABLEID_MAX) {
++				yyerror("invalid rtable id %d", $2);
++				YYERROR;
++			}
++			table->conf.rtable = $2;
++		}
+ 		;
+ 
+ /* should be in sync with sbin/pfctl/parse.y's hashkey */
+Index: pfe_filter.c
+===================================================================
+RCS file: /cvs/src/usr.sbin/relayd/pfe_filter.c,v
+retrieving revision 1.61
+diff -u -p -r1.61 pfe_filter.c
+--- pfe_filter.c	24 Jan 2017 10:49:14 -0000	1.61
++++ pfe_filter.c	28 Feb 2017 19:44:08 -0000
+@@ -60,7 +60,7 @@ init_tables(struct relayd *env)
+ 	i = 0;
+ 
+ 	TAILQ_FOREACH(rdr, env->sc_rdrs, entry) {
+-		if (strlcpy(tables[i].pfrt_anchor, RELAYD_ANCHOR "/",
++		if (strlcpy(tables[i].pfrt_anchor, env->sc_baseanchor,
+ 		    sizeof(tables[i].pfrt_anchor)) >= PF_ANCHOR_NAME_SIZE)
+ 			goto toolong;
+ 		if (strlcat(tables[i].pfrt_anchor, rdr->conf.name,
+@@ -114,7 +114,7 @@ kill_tables(struct relayd *env)
+ 
+ 	TAILQ_FOREACH(rdr, env->sc_rdrs, entry) {
+ 		memset(&io, 0, sizeof(io));
+-		if (strlcpy(io.pfrio_table.pfrt_anchor, RELAYD_ANCHOR "/",
++		if (strlcpy(io.pfrio_table.pfrt_anchor, env->sc_baseanchor,
+ 		    sizeof(io.pfrio_table.pfrt_anchor)) >= PF_ANCHOR_NAME_SIZE)
+ 			goto toolong;
+ 		if (strlcat(io.pfrio_table.pfrt_anchor, rdr->conf.name,
+@@ -160,7 +160,7 @@ sync_table(struct relayd *env, struct rd
+ 	io.pfrio_size = table->up;
+ 	io.pfrio_size2 = 0;
+ 	io.pfrio_buffer = addlist;
+-	if (strlcpy(io.pfrio_table.pfrt_anchor, RELAYD_ANCHOR "/",
++	if (strlcpy(io.pfrio_table.pfrt_anchor, env->sc_baseanchor,
+ 	    sizeof(io.pfrio_table.pfrt_anchor)) >= PF_ANCHOR_NAME_SIZE)
+ 		goto toolong;
+ 	if (strlcat(io.pfrio_table.pfrt_anchor, rdr->conf.name,
+@@ -274,7 +274,7 @@ flush_table(struct relayd *env, struct r
+ 		return;
+ 
+ 	memset(&io, 0, sizeof(io));
+-	if (strlcpy(io.pfrio_table.pfrt_anchor, RELAYD_ANCHOR "/",
++	if (strlcpy(io.pfrio_table.pfrt_anchor, env->sc_baseanchor,
+ 	    sizeof(io.pfrio_table.pfrt_anchor)) >= PF_ANCHOR_NAME_SIZE)
+ 		goto toolong;
+ 	if (strlcat(io.pfrio_table.pfrt_anchor, rdr->conf.name,
+@@ -343,7 +343,7 @@ sync_ruleset(struct relayd *env, struct 
+ 		return;
+ 
+ 	bzero(anchor, sizeof(anchor));
+-	if (strlcpy(anchor, RELAYD_ANCHOR "/", sizeof(anchor)) >=
++	if (strlcpy(anchor, env->sc_baseanchor, sizeof(anchor)) >=
+ 	    PF_ANCHOR_NAME_SIZE)
+ 		goto toolong;
+ 	if (strlcat(anchor, rdr->conf.name, sizeof(anchor)) >=
+@@ -406,10 +406,12 @@ sync_ruleset(struct relayd *env, struct 
+ 		rio.rule.dst.port_op = address->port.op;
+ 		rio.rule.dst.port[0] = address->port.val[0];
+ 		rio.rule.dst.port[1] = address->port.val[1];
+-		rio.rule.rtableid = -1; /* stay in the main routing table */
++		rio.rule.rtableid = -1; /* default: main routing table */
+ 		rio.rule.onrdomain = env->sc_rtable;
+ 		DPRINTF("%s rtable %d",__func__,env->sc_rtable);
+ 
++		if (t->conf.rtable > 0)
++			rio.rule.rtableid = t->conf.rtable;
+ 		if (rio.rule.proto == IPPROTO_TCP)
+ 			rio.rule.timeout[PFTM_TCP_ESTABLISHED] =
+ 			    (u_int32_t)MINIMUM(rdr->conf.timeout.tv_sec,
+@@ -506,7 +508,7 @@ flush_rulesets(struct relayd *env)
+ 
+ 	kill_tables(env);
+ 	TAILQ_FOREACH(rdr, env->sc_rdrs, entry) {
+-		if (strlcpy(anchor, RELAYD_ANCHOR "/", sizeof(anchor)) >=
++		if (strlcpy(anchor, env->sc_baseanchor, sizeof(anchor)) >=
+ 		    PF_ANCHOR_NAME_SIZE)
+ 			goto toolong;
+ 		if (strlcat(anchor, rdr->conf.name, sizeof(anchor)) >=
+@@ -515,15 +517,17 @@ flush_rulesets(struct relayd *env)
+ 		if (transaction_init(env, anchor) == -1 ||
+ 		    transaction_commit(env) == -1)
+ 			log_warn("%s: transaction for %s/ failed", __func__,
+-			    RELAYD_ANCHOR);
++			    env->sc_baseanchor);
+ 	}
+-	if (strlcpy(anchor, RELAYD_ANCHOR, sizeof(anchor)) >=
+-	    PF_ANCHOR_NAME_SIZE)
++	if (strlen(anchor) >= PF_ANCHOR_NAME_SIZE)
+ 		goto toolong;
++	/* XXX: no trailing / in anchor or we leak the main anchor at exit */
++	bzero(anchor,sizeof(anchor));
++	(void)strlcpy(anchor, env->sc_baseanchor, sizeof(env->sc_baseanchor)-3);
+ 	if (transaction_init(env, anchor) == -1 ||
+ 	    transaction_commit(env) == -1)
+ 		log_warn("%s: transaction for %s failed", __func__,
+-		    RELAYD_ANCHOR);
++		    anchor);
+ 	log_debug("%s: flushed rules", __func__);
+ 	return;
+ 
+@@ -620,7 +624,7 @@ check_table(struct relayd *env, struct r
+ 	io.pfrio_esize = sizeof(struct pfr_tstats);
+ 	io.pfrio_size = 1;
+ 	io.pfrio_buffer = &tstats;
+-	if (strlcpy(io.pfrio_table.pfrt_anchor, RELAYD_ANCHOR "/",
++	if (strlcpy(io.pfrio_table.pfrt_anchor, env->sc_baseanchor,
+ 	    sizeof(io.pfrio_table.pfrt_anchor)) >= PF_ANCHOR_NAME_SIZE)
+ 		goto toolong;
+ 	if (strlcat(io.pfrio_table.pfrt_anchor, rdr->conf.name,
+Index: relayd.8
+===================================================================
+RCS file: /cvs/src/usr.sbin/relayd/relayd.8,v
+retrieving revision 1.25
+diff -u -p -r1.25 relayd.8
+--- relayd.8	27 Jul 2015 14:50:58 -0000	1.25
++++ relayd.8	28 Feb 2017 19:44:08 -0000
+@@ -23,8 +23,10 @@
+ .Sh SYNOPSIS
+ .Nm
+ .Op Fl dnv
++.Op Fl a Ar anchor
+ .Op Fl D Ar macro Ns = Ns Ar value
+ .Op Fl f Ar file
++.Op Fl s Ar socket
+ .Sh DESCRIPTION
+ .Nm
+ is a daemon to relay and dynamically redirect incoming connections to
+@@ -96,6 +98,9 @@ can be used to alter or report on the st
+ .Pp
+ The options are as follows:
+ .Bl -tag -width Ds
++.It Fl a Ar anchor
++Specify an alternative anchorname.
++The default is 'relayd'.
+ .It Fl D Ar macro Ns = Ns Ar value
+ Define
+ .Ar macro
+@@ -120,12 +125,17 @@ Configtest mode.
+ Only check the configuration file for validity.
+ .It Fl v
+ Produce more verbose output.
++.It Fl s Ar socket
++Specify an alternative socket.
++The default is
++.Pa /var/run/relayd.sock
+ .El
+ .Sh FILES
+ .Bl -tag -width "/var/run/relayd.sockXX" -compact
+ .It Pa /etc/relayd.conf
+ Default configuration file.
+ .It Pa /var/run/relayd.sock
++Default
+ .Ux Ns -domain
+ socket used for communication with
+ .Xr relayctl 8 .
+Index: relayd.c
+===================================================================
+RCS file: /cvs/src/usr.sbin/relayd/relayd.c,v
+retrieving revision 1.165
+diff -u -p -r1.165 relayd.c
+--- relayd.c	24 Jan 2017 10:49:14 -0000	1.165
++++ relayd.c	28 Feb 2017 19:44:08 -0000
+@@ -107,7 +107,7 @@ usage(void)
+ {
+ 	extern char	*__progname;
+ 
+-	fprintf(stderr, "usage: %s [-dnv] [-D macro=value] [-f file]\n",
++	fprintf(stderr, "usage: %s [-dnv] [-a anchor ] [-D macro=value] [-f file] [-s socket ]\n",
+ 	    __progname);
+ 	exit(1);
+ }
+@@ -121,12 +121,14 @@ main(int argc, char *argv[])
+ 	struct relayd		*env;
+ 	struct privsep		*ps;
+ 	const char		*conffile = CONF_FILE;
++	const char		*ctlsock = RELAYD_SOCKET;
++	char			*baseanchor = RELAYD_ANCHOR;
+ 	enum privsep_procid	 proc_id = PROC_PARENT;
+ 	int			 proc_instance = 0;
+ 	const char		*errp, *title = NULL;
+ 	int			 argc0 = argc;
+ 
+-	while ((c = getopt(argc, argv, "dD:nI:P:f:v")) != -1) {
++	while ((c = getopt(argc, argv, "a:dD:f:nI:P:s:v")) != -1) {
+ 		switch (c) {
+ 		case 'd':
+ 			debug = 2;
+@@ -159,6 +161,14 @@ main(int argc, char *argv[])
+ 			if (errp)
+ 				fatalx("invalid process instance");
+ 			break;
++		case 's':
++			ctlsock = optarg;
++			break;
++		case 'a':
++			if (strlen(optarg) >= PF_ANCHOR_NAME_SIZE)
++				fatalx("anchor too long");
++			(void)asprintf(&baseanchor, "%s/", optarg);
++			break;
+ 		default:
+ 			usage();
+ 		}
+@@ -180,6 +190,7 @@ main(int argc, char *argv[])
+ 	ps->ps_env = env;
+ 	TAILQ_INIT(&ps->ps_rcsocks);
+ 	env->sc_conffile = conffile;
++	env->sc_baseanchor = baseanchor;
+ 	env->sc_conf.opts = opts;
+ 	TAILQ_INIT(&env->sc_hosts);
+ 	TAILQ_INIT(&env->sc_sessions);
+@@ -200,7 +211,7 @@ main(int argc, char *argv[])
+ 		errx(1, "unknown user %s", RELAYD_USER);
+ 
+ 	/* Configure the control socket */
+-	ps->ps_csock.cs_name = RELAYD_SOCKET;
++	ps->ps_csock.cs_name = ctlsock;
+ 
+ 	log_init(debug, LOG_DAEMON);
+ 	log_setverbose(verbose);
+Index: relayd.conf.5
+===================================================================
+RCS file: /cvs/src/usr.sbin/relayd/relayd.conf.5,v
+retrieving revision 1.175
+diff -u -p -r1.175 relayd.conf.5
+--- relayd.conf.5	27 Feb 2017 22:25:58 -0000	1.175
++++ relayd.conf.5	28 Feb 2017 19:44:08 -0000
+@@ -386,6 +386,9 @@ It must be a multiple of the global inte
+ Set the timeout in milliseconds for each host that is checked using
+ TCP as the transport.
+ This will override the global timeout, which is 200 milliseconds by default.
++.It Ic rtable Ar id
++This will insert the rule with its destination within routing table with
++.Ar id .
+ .El
+ .Pp
+ The following options will set the scheduling algorithm to select a
+Index: relayd.h
+===================================================================
+RCS file: /cvs/src/usr.sbin/relayd/relayd.h,v
+retrieving revision 1.239
+diff -u -p -r1.239 relayd.h
+--- relayd.h	2 Feb 2017 08:24:16 -0000	1.239
++++ relayd.h	28 Feb 2017 19:44:08 -0000
+@@ -477,6 +477,7 @@ struct table_config {
+ 	int			 check;
+ 	char			 demote_group[IFNAMSIZ];
+ 	char			 ifname[IFNAMSIZ];
++	int			 rtable;
+ 	struct timeval		 timeout;
+ 	in_port_t		 port;
+ 	int			 retcode;
+@@ -1054,6 +1055,7 @@ struct pfdata {
+ struct relayd {
+ 	struct relayd_config	 sc_conf;
+ 	const char		*sc_conffile;
++	char			*sc_baseanchor;
+ 	struct pfdata		*sc_pf;
+ 	int			 sc_rtsock;
+ 	int			 sc_rtseq;
