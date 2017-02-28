@@ -1,0 +1,62 @@
+{
+  "variables": {
+    "hostname": "",
+    "architecture": "",
+    "keyboard_layout": "",
+    "root_password": "",
+    "timezone": "",
+    "ntp_pool": ""
+  },
+  "builders": [
+    {
+      "type": "virtualbox-iso",
+      "name": "vbox-obsd60-amd64",
+      "boot_command": [
+        "S<enter>",
+        "cat <<EOF >>install.conf<enter>",
+        "Choose your keyboard layout = {{user `keyboard_layout`}}<enter>",
+        "System hostname = {{user `hostname`}}<enter>",
+        "Password for root = {{user `root_password`}}<enter>",
+        "Start sshd(8) by default = yes<enter>",
+        "Do you expect to run the X Window System = no<enter>",
+        "Setup a user = no<enter>",
+        "Allow root ssh login = yes<enter>",
+        "What timezone are you in = {{user `timezone`}}<enter>",
+        "Location of sets = cd0<enter>",
+        "Set name(s) = -comp*.tgz -game*.tgz -x* +bsd.mp<enter>",
+        "Continue without verification = yes<enter>",
+	"SHA256.sig. = yes<enter>",
+	"Time appears wrong = yes<enter>",
+        "EOF<enter>",
+        "install -af install.conf && reboot<enter>"
+        ],
+      "boot_wait": "15s",
+      "disk_size": 5120,
+      "guest_os_type": "OpenBSD_64",
+      "iso_url": "./ISO/install60.iso",
+      "iso_checksum": "a9b6b812cb456f11ba4362e232efdd5f0c47868f4281e383ecee77541b54498c",
+      "iso_checksum_type": "sha256",
+      "ssh_username": "root",
+      "ssh_password": "vagrant",
+      "ssh_wait_timeout": "10m",
+      "shutdown_command": "echo '/sbin/halt -p' > shutdown.sh; sh 'shutdown.sh'",
+      "guest_additions_path": "disable",
+      "virtualbox_version_file": ".vbox_version",
+      "vboxmanage": [
+        [ "modifyvm", "{{.Name}}", "--memory", "64" ],
+        [ "modifyvm", "{{.Name}}", "--cpus", "1" ]
+      ]
+    }
+  ],
+  "provisioners": [
+    {
+      "type": "shell",
+      "environment_vars": [
+         "PKG_PATH=http://artfiles.org/openbsd/6.0/packages/%a/"
+      ],
+      "inline": "pkg_add -Iz sudo-1.8 python-2.7"
+    }
+  ],
+  "post-processors": ["vagrant"]
+}
+

@@ -1,0 +1,8 @@
+{
+    "hostname": "openbsd",
+    "architecture": "amd64",
+    "keyboard_layout": "us",
+    "root_password": "vagrant",
+    "timezone": "Europe/Berlin",
+    "ntp_pool": "de.pool.ntp.org"
+}
