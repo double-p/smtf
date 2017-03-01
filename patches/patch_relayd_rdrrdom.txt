@@ -4,7 +4,7 @@ RCS file: /cvs/src/usr.sbin/relayd/parse.y,v
 retrieving revision 1.214
 diff -u -p -r1.214 parse.y
 --- parse.y	5 Jan 2017 13:53:09 -0000	1.214
-+++ parse.y	28 Feb 2017 19:44:08 -0000
++++ parse.y	1 Mar 2017 15:50:24 -0000
 @@ -805,6 +805,13 @@ tableopts	: CHECK tablecheck
  				break;
  			}
@@ -25,7 +25,7 @@ RCS file: /cvs/src/usr.sbin/relayd/pfe_filter.c,v
 retrieving revision 1.61
 diff -u -p -r1.61 pfe_filter.c
 --- pfe_filter.c	24 Jan 2017 10:49:14 -0000	1.61
-+++ pfe_filter.c	28 Feb 2017 19:44:08 -0000
++++ pfe_filter.c	1 Mar 2017 15:50:24 -0000
 @@ -60,7 +60,7 @@ init_tables(struct relayd *env)
  	i = 0;
  
@@ -85,7 +85,14 @@ diff -u -p -r1.61 pfe_filter.c
  		if (rio.rule.proto == IPPROTO_TCP)
  			rio.rule.timeout[PFTM_TCP_ESTABLISHED] =
  			    (u_int32_t)MINIMUM(rdr->conf.timeout.tv_sec,
-@@ -506,7 +508,7 @@ flush_rulesets(struct relayd *env)
+@@ -500,13 +502,14 @@ flush_rulesets(struct relayd *env)
+ {
+ 	struct rdr	*rdr;
+ 	char		 anchor[PF_ANCHOR_NAME_SIZE];
++	char		*slash = NULL;
+ 
+ 	if (!(env->sc_conf.flags & F_NEEDPF))
+ 		return;
  
  	kill_tables(env);
  	TAILQ_FOREACH(rdr, env->sc_rdrs, entry) {
@@ -94,12 +101,14 @@ diff -u -p -r1.61 pfe_filter.c
  		    PF_ANCHOR_NAME_SIZE)
  			goto toolong;
  		if (strlcat(anchor, rdr->conf.name, sizeof(anchor)) >=
-@@ -515,15 +517,17 @@ flush_rulesets(struct relayd *env)
+@@ -514,16 +517,21 @@ flush_rulesets(struct relayd *env)
+ 			goto toolong;
  		if (transaction_init(env, anchor) == -1 ||
  		    transaction_commit(env) == -1)
- 			log_warn("%s: transaction for %s/ failed", __func__,
+-			log_warn("%s: transaction for %s/ failed", __func__,
 -			    RELAYD_ANCHOR);
-+			    env->sc_baseanchor);
++			log_warn("%s: transaction for %s failed", __func__,
++			    anchor);
  	}
 -	if (strlcpy(anchor, RELAYD_ANCHOR, sizeof(anchor)) >=
 -	    PF_ANCHOR_NAME_SIZE)
@@ -107,16 +116,20 @@ diff -u -p -r1.61 pfe_filter.c
  		goto toolong;
 +	/* XXX: no trailing / in anchor or we leak the main anchor at exit */
 +	bzero(anchor,sizeof(anchor));
-+	(void)strlcpy(anchor, env->sc_baseanchor, sizeof(env->sc_baseanchor)-3);
++	if (( slash = strchr(env->sc_baseanchor, '/') ) != NULL ) {
++		*slash++ = '\0';
++		(void)strlcpy(anchor, slash, sizeof(anchor));
++	}
  	if (transaction_init(env, anchor) == -1 ||
  	    transaction_commit(env) == -1)
- 		log_warn("%s: transaction for %s failed", __func__,
+-		log_warn("%s: transaction for %s failed", __func__,
 -		    RELAYD_ANCHOR);
++		log_warn("%s: transaction for %s/ failed", __func__,
 +		    anchor);
  	log_debug("%s: flushed rules", __func__);
  	return;
  
-@@ -620,7 +624,7 @@ check_table(struct relayd *env, struct r
+@@ -620,7 +628,7 @@ check_table(struct relayd *env, struct r
  	io.pfrio_esize = sizeof(struct pfr_tstats);
  	io.pfrio_size = 1;
  	io.pfrio_buffer = &tstats;
@@ -131,7 +144,7 @@ RCS file: /cvs/src/usr.sbin/relayd/relayd.8,v
 retrieving revision 1.25
 diff -u -p -r1.25 relayd.8
 --- relayd.8	27 Jul 2015 14:50:58 -0000	1.25
-+++ relayd.8	28 Feb 2017 19:44:08 -0000
++++ relayd.8	1 Mar 2017 15:50:24 -0000
 @@ -23,8 +23,10 @@
  .Sh SYNOPSIS
  .Nm
@@ -177,7 +190,7 @@ RCS file: /cvs/src/usr.sbin/relayd/relayd.c,v
 retrieving revision 1.165
 diff -u -p -r1.165 relayd.c
 --- relayd.c	24 Jan 2017 10:49:14 -0000	1.165
-+++ relayd.c	28 Feb 2017 19:44:08 -0000
++++ relayd.c	1 Mar 2017 15:50:24 -0000
 @@ -107,7 +107,7 @@ usage(void)
  {
  	extern char	*__progname;
@@ -241,7 +254,7 @@ RCS file: /cvs/src/usr.sbin/relayd/relayd.conf.5,v
 retrieving revision 1.175
 diff -u -p -r1.175 relayd.conf.5
 --- relayd.conf.5	27 Feb 2017 22:25:58 -0000	1.175
-+++ relayd.conf.5	28 Feb 2017 19:44:08 -0000
++++ relayd.conf.5	1 Mar 2017 15:50:24 -0000
 @@ -386,6 +386,9 @@ It must be a multiple of the global inte
  Set the timeout in milliseconds for each host that is checked using
  TCP as the transport.
@@ -258,7 +271,7 @@ RCS file: /cvs/src/usr.sbin/relayd/relayd.h,v
 retrieving revision 1.239
 diff -u -p -r1.239 relayd.h
 --- relayd.h	2 Feb 2017 08:24:16 -0000	1.239
-+++ relayd.h	28 Feb 2017 19:44:08 -0000
++++ relayd.h	1 Mar 2017 15:50:24 -0000
 @@ -477,6 +477,7 @@ struct table_config {
  	int			 check;
  	char			 demote_group[IFNAMSIZ];
