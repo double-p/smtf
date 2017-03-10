@@ -10,3 +10,5 @@ Workflow for the virtualized testing environment:
   in each VM or reboot: 'vagrant reload'
 - Fun+Profit!
 
+If you dont want to use ansible at all, you can use the 'noansible.Vagrantfile'
+to start with a basic testbed to configure rdomains all on your own.
