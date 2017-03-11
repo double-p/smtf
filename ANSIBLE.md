@@ -4,6 +4,10 @@ The shipped ansible code provides several tasks to be accomplished:
 - generate a Vagrantfile including the "physical" networking
 - populate hostname.if(5) based on group/host_vars
 
+If you happen to be an Ansible rookie, I can recommend the tutorial from
+Benedict given at AsiaBSDCon 2017, too and can be found here:
+https://people.freebsd.org/~bcr/Ansible_Tutorial.pdf
+
 Vagrantfile
 -----
 The following commands generates a Vagrantfile based on group_vars/rdomain.yml information
